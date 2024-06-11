@@ -1,0 +1,12 @@
+name: BIOC192_Enzyme_Experiments
+title: BIOC192_Enzyme_Experiments
+username: enzymekineticsgui
+account: enzymekineticsgui
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12160904
+bundleId: 8725131
+url: https://enzymekineticsgui.shinyapps.io/BIOC192_Enzyme_Experiments/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
