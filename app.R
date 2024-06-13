@@ -6,34 +6,31 @@ library(rhandsontable)
 
 # Define UI for application
 ui <- fluidPage(
-  titlePanel("Shiny App"),
+  titlePanel("BIOC192 Lab 2"),
   tabsetPanel(
     tabPanel("Exercise 1",
-             DT::dataTableOutput("table1"),
-             tags$br(),
+             rHandsontableOutput("table1"),
              plotOutput("absorbance_conc")),
-    tabPanel("Tab handsontable",
-             rHandsontableOutput("table1h")
-             ),
-    tabPanel("Tab 2",
-             DT::dataTableOutput("table2"),
+    tabPanel("Exercise 2",
+             rHandsontableOutput("table2"),
              tags$br(),
              plotOutput("progressCurve")),
-    tabPanel("Tab 3",
+    tabPanel("Exercise 3",
              fluidRow(
                column(6,
-                      DTOutput("table3")
+                      rHandsontableOutput("table3")
                ),
                 tags$br(),
                column(6,
-                      DTOutput("table4"),
+                      rHandsontableOutput("table4"),
+                      
                 tags$br(),
                       plotOutput("VvsS"))
              )),
-    tabPanel("Tab 4",
+    tabPanel("Exercise 4",
              fluidRow(
                column(6,
-                      DTOutput("table5"),
+                      rHandsontableOutput("table5"),
                       plotOutput("lineweaver"))
              ))
   )
@@ -44,167 +41,184 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   
-  #test hands on table 
-  data1h <- reactiveValues(df = data.frame(Sample = c("Water", "1 in 8 dilution", "1 in 4 dilution", "1 in 2 dilution", "Undiluted"),
-                                          Concentration = rep(0, 5),
-                                          Absorbance = rep(0, 5),
-                                          stringsAsFactors = FALSE))
-  
-  output$table1h <- renderRHandsontable({
-    rhandsontable(data1h$df) %>%
-      hot_col("Concentration", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
-      hot_col("Absorbance", type = "numeric", strict = TRUE, allowInvalid = FALSE)
-  })
-  #Define the initial data frame for Tab 1
+
+#Define the initial data frame for Tab 1
+
+#note to self, make the first values 0,0 for the water sample. 
    data1 <- reactiveValues(df = data.frame(Sample = c("Water", "1 in 8 dilution", "1 in 4 dilution", "1 in 2 dilution", "Undiluted"),
                                            Concentration = rep("", 5),
                                            Absorbance = rep("", 5),
                                            stringsAsFactors = FALSE))
   
    #Render the data table for Tab 1
-   output$table1 <- DT::renderDataTable({
-     DT::datatable(data1$df, editable = TRUE, options = list(dom = 't', paging = FALSE, searching = FALSE))
+   output$table1 <- renderRHandsontable({
+     rhandsontable(data1$df) %>%
+       hot_col("Concentration", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
+       hot_col("Absorbance", type = "numeric", strict = TRUE, allowInvalid = FALSE)
+   })
+   
+   observe({
+     if (!is.null(input$table1)) {
+       data1$df <- hot_to_r(input$table1)
+     }
    })
   
   
   
-  
-  # Update the data frame for Tab 1 when the table is edited
-   proxy1 = dataTableProxy('table1')
-   observeEvent(input$table1_cell_edit, {
-   info = input$table1_cell_edit
-   str(info)
-   i = info$row
-   j = info$col
-   v = info$value
-   data1$df[i, j] <<- DT::coerceValue(v, data1$df[i, j])
-   replaceData(proxy1, data1$df, resetPaging = FALSE)
-   })
-  
-  
-  
-  
-  # Render the absorbance vs concentration plot for Tab 1
+# Render the absorbance vs concentration plot for Tab 1
   output$absorbance_conc <- renderPlot({
-    req(nrow(data1$df) > 0)
-    plot(data1$df$Concentration, data1$df$Absorbance, xlab = "Concentration", ylab = "Absorbance", main = "Absorbance vs Concentration")
+
+# Ensure the Concentration and Absorbance columns are not NULL
+    req(data1$df$Concentration, data1$df$Absorbance)
+    
+#make the plot
+    ggplot(data1$df, aes(x = Concentration, y = Absorbance)) +
+      geom_point() +
+      labs(x = "Concentration", y = "Absorbance", title = "Absorbance vs Concentration") +
+      theme_minimal()
   })
   
-  # Define the initial data frame for Tab 2
+# Define the initial data frame for Tab 2
   data2 <- reactiveValues(df = data.frame(Time = seq(20, 180, by = 20),
                                           Assay1 = rep(0, 9),
                                           Assay2 = rep(0, 9),
                                           stringsAsFactors = FALSE))
   
-  # Convert Assay1 and Assay2 to numeric (if possible)
+# Convert Assay1 and Assay2 to numeric (if possible)
   observe({
     data2$df$Assay1 <- as.numeric(data2$df$Assay1)
     data2$df$Assay2 <- as.numeric(data2$df$Assay2)
   })
   
   # Render the data table for Tab 2
-  output$table2 <- DT::renderDataTable({
-    DT::datatable(data2$df, editable = TRUE, options = list(dom = 't', paging = FALSE, searching = FALSE))
+  output$table2 <- renderRHandsontable({
+    rhandsontable(data2$df) %>% 
+      hot_col("Time", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
+      hot_col("Assay1", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
+      hot_col("Assay2", type = "numeric", strict = TRUE, allowInvalid = FALSE)
+  })
+  
+  #Update dataframe after inputs.
+  observe({
+    if (!is.null(input$table2)) {
+      data2$df <- hot_to_r(input$table2)
+    }
   })
 
+  # Render the progress Curve scatter plot for Tab 2
+  output$progressCurve <- renderPlot({
+    req(nrow(data2$df) > 0)
     
-    # Update the data frame for Tab 2 when the table is edited
-    proxy2 = dataTableProxy('table2')
-    observeEvent(input$table2_cell_edit, {
-      info = input$table2_cell_edit
-      i = info$row
-      j = info$col
-      v = info$value
-      data2$df[i, j] <<- DT::coerceValue(v, data2$df[i, j])
-      replaceData(proxy2, data2$df, resetPaging = FALSE)
-    })
-    
-    # Render the progress Curve scatter plot for Tab 2
-    output$progressCurve <- renderPlot({
-      req(nrow(data2$df) > 0)
-      
-      # Set y-axis limits
-      ylim <- c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)
-      #design the plot
-      plot(data2$df$Time, data2$df$Assay1, xlab = "Time", ylab = "Assay1", main = "Alcohol Dehydrogenase Assay", type = "p", col = "black", pch = 16, ylim = ylim)
-      points(data2$df$Time, data2$df$Assay2, col = "red", pch = 17)
-      legend("bottomright", legend = c("Assay1", "Assay2"), col = c("black", "red"), pch = c(16, 17))
-    })
+    # Create the plot
+    ggplot(data2$df, aes(x = Time)) +
+      geom_point(aes(y = Assay1), color = "black") +
+      geom_point(aes(y = Assay2), color = "red") +
+      labs(x = "Time", y = "Assay", title = "Alcohol Dehydrogenase Assay") +
+      theme_minimal() +
+      scale_y_continuous(limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
+      theme(legend.position = "bottomright") +
+      scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2"))
+  })
    
     #dataframe 3 generation. Currently it has values in for debugging.
     #later we need to swap it back from seq to rep with NA's so the 
     #students can enter their own data.
-  data3 <- data.frame(
+  # Define the initial data frame
+  data3 <- reactiveValues(df = data.frame(
     Time = seq(20, 180, by = 20),
-    Conc1 = seq(from = 0, to = 0.3, length.out = 9),
-    Conc2 = seq(from = 0, to = 0.3, length.out = 9)^1.1,
-    Conc3 = seq(from = 0, to = 0.3, length.out = 9)^1.2,
-    Conc4 = seq(from = 0, to = 0.3, length.out = 9)^1.3,
-    Conc5 = seq(from = 0, to = 0.3, length.out = 9)^1.4
-  )
-  output$table3 <- renderDT({
-    datatable(data3, editable = TRUE, options = list(dom = 't', paging = FALSE, searching = FALSE))
+    Conc1 = seq(from = 0, to = 0.3, length.out = 9)^1.5,
+    Conc2 = seq(from = 0, to = 0.3, length.out = 9)^1.4,
+    Conc3 = seq(from = 0, to = 0.3, length.out = 9)^1.3,
+    Conc4 = seq(from = 0, to = 0.3, length.out = 9)^1.2,
+    Conc5 = seq(from = 0, to = 0.3, length.out = 9)^1.1,
+    stringsAsFactors = FALSE
+  ))
+  
+  # Render the data table
+  output$table3 <- renderRHandsontable({
+    rhandsontable(data3$df)
   })
-  data4 <- data.frame(
-    Conc1 = c((data3$Conc1[2] - data3$Conc1[1])*3, 1),
-    Conc2 = c((data3$Conc2[2] - data3$Conc2[1])*3, 2),
-    Conc3 = c((data3$Conc3[2] - data3$Conc3[1])*3, 3),
-    Conc4 = c((data3$Conc4[2] - data3$Conc4[1])*3, 4),
-    Conc5 = c((data3$Conc5[2] - data3$Conc5[1])*3, 5)
-  )
+
+  # Update the data frame when the table is edited
+  observe({
+    if (!is.null(input$table3)) {
+      data3$df <- hot_to_r(input$table3)
+    }
+  })
   
 
-  
-  #round data4 table down to 2 dp
-  data4 <- as.data.frame(sapply(data4, round, 2))
-  
-  
-  output$table4 <- renderDT({
-    row.names(data4) <- c("∆A per min", "Concentration")
-    datatable(data4, editable = 't', options = list(dom = 't', paging = FALSE, searching = FALSE))
+  # Create a reactive expression for table4
+  table4 <- reactive({
+    # Access the data from data3
+    df <- data3$df
+    
+    # Calculate the difference between the second and first value in each column
+    new_df <- data.frame(lapply(df, function(x) (x[2] - x[1])*3))
+    
+    # Remove the first column
+    new_df <- new_df[,-1]
+    
+    # Add an empty row
+    new_df <- rbind(new_df, rep(1, ncol(new_df)))
+    
+    # Transpose the data frame
+    new_df <- t(new_df)
+    
+    # Add column names
+    colnames(new_df) <- c("deltaA", "Concentration")
+    
+    return(new_df)
   })
- 
-#transpose data4 for plotting
-  data4_transposed <- as.data.frame(t(data4))
-  data4_transposed <- data4_transposed[-1,]
-  col1 <- names(data4_transposed)[1]
-  col2 <- names(data4_transposed)[2]
-  # Create the scatter plot
+  
+  # Render table4
+  output$table4 <- renderRHandsontable({
+    rhandsontable(table4(), readOnly = FALSE) 
+  })
+  
+  # Create a reactiveValues object to store the data
+  data <- reactiveValues()
+  
+  # Update the data in the reactiveValues object when table4 changes
+  observeEvent(input$table4, {
+    data$df <- hot_to_r(input$table4)
+  })
+  
+  # Render the VvsS plot
   output$VvsS <- renderPlot({
-    ggplot(data4_transposed, aes_string(x = col2, y = col1)) +
-      geom_point(size = 3, position = position_dodge(width = 0.5)) +
-      labs(x = "Calculation", y = "Value") +
+    # Access the data from the reactiveValues object
+    df <- data$df
+    
+    # Create a ggplot2 dot plot
+    ggplot(df, aes(x = Concentration, y = deltaA)) +
+      geom_point() +
+      labs(x = "Concentration", y = "Delta A") +
       theme_minimal()
   })
+  # Create a reactive expression for table5
+  table5 <- reactive({
+    # Access the data from the reactiveValues object
+    df <- data$df
     
-  data5 <- data.frame(
+    # Calculate the reciprocal of each value in the data frame
+    new_df <- 1 / df
     
-    Conc1 = c(1/data4$Conc1[1],1/data4$Conc1[2]),
-    Conc2 = c(1/data4$Conc2[1],1/data4$Conc2[2]),
-    Conc3 = c(1/data4$Conc3[1],1/data4$Conc3[2]),
-    Conc4 = c(1/data4$Conc4[1],1/data4$Conc4[2]),
-    Conc5 = c(1/data4$Conc5[1],1/data4$Conc5[2])
-    
-  )
-  
-  
-  #round the table down to 2 dp. 
-  data5 <- as.data.frame(sapply(data5, round, 2))
-  
-  output$table5 <- renderDT({
-    row.names(data5) <- c("1/[s]", "1/[v]")
-    datatable(data5, editable = 'f', options = list(dom = 't', paging = FALSE, searching = FALSE))
+    return(new_df)
   })
-  #create the lineweaver burk plot
-  data5_transposed <- as.data.frame(t(data5))
-  data5_transposed <- data5_transposed[-1,]
-  col1 <- names(data5_transposed)[1]
-  col2 <- names(data5_transposed)[2]
-  # Create the scatter plot
+  
+  # Render table5
+  output$table5 <- renderRHandsontable({
+    rhandsontable(table5(), readOnly = TRUE) 
+  })
+  
+  # Render the Lineweaver-Burk plot
   output$lineweaver <- renderPlot({
-    ggplot(data5_transposed, aes_string(x = col2, y = col1)) +
-      geom_point(size = 3, position = position_dodge(width = 0.5)) +
-      labs(x = "Calculation", y = "Value") +
+    # Access the data from table5
+    df <- table5()
+    
+    # Create a ggplot2 dot plot
+    ggplot(df, aes(x = Concentration, y = deltaA)) +
+      geom_point() +
+      labs(x = "1/Concentration", y = "1/Delta A") +
       theme_minimal()
   })
   
