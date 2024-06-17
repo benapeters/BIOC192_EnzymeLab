@@ -3,6 +3,7 @@ library(DT)
 library(ggplot2)
 library(rhandsontable)
 
+# modifiction to test CI pipeline
 
 # Define UI for application
 ui <- fluidPage(
