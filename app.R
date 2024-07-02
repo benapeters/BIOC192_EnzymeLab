@@ -1,9 +1,7 @@
 library(shiny)
-library(DT)
 library(ggplot2)
 library(rhandsontable)
 
-# modifiction to test CI pipeline
 
 # Define UI for application
 ui <- fluidPage(
@@ -21,11 +19,11 @@ ui <- fluidPage(
                column(6,
                       rHandsontableOutput("table3")
                ),
-                tags$br(),
+               tags$br(),
                column(6,
                       rHandsontableOutput("table4"),
                       
-                tags$br(),
+                      tags$br(),
                       plotOutput("VvsS"))
              )),
     tabPanel("Exercise 4",
@@ -42,55 +40,67 @@ ui <- fluidPage(
 # Define server logic
 server <- function(input, output) {
   
-
-#Define the initial data frame for Tab 1
-
-#note to self, make the first values 0,0 for the water sample. 
-   data1 <- reactiveValues(df = data.frame(Sample = c("Water", "1 in 8 dilution", "1 in 4 dilution", "1 in 2 dilution", "Undiluted"),
-                                           Concentration = rep("", 5),
-                                           Absorbance = rep("", 5),
-                                           stringsAsFactors = FALSE))
   
-   #Render the data table for Tab 1
-   output$table1 <- renderRHandsontable({
-     rhandsontable(data1$df) %>%
-       hot_col("Concentration", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
-       hot_col("Absorbance", type = "numeric", strict = TRUE, allowInvalid = FALSE)
-   })
-   
-   observe({
-     if (!is.null(input$table1)) {
-       data1$df <- hot_to_r(input$table1)
-     }
-   })
+  #Define the initial data frame for Exercise 1
   
-  
-  
-# Render the absorbance vs concentration plot for Tab 1
-  output$absorbance_conc <- renderPlot({
-
-# Ensure the Concentration and Absorbance columns are not NULL
-    req(data1$df$Concentration, data1$df$Absorbance)
-    
-#make the plot
-    ggplot(data1$df, aes(x = Concentration, y = Absorbance)) +
-      geom_point() +
-      labs(x = "Concentration", y = "Absorbance", title = "Absorbance vs Concentration") +
-      theme_minimal()
-  })
-  
-# Define the initial data frame for Tab 2
-  data2 <- reactiveValues(df = data.frame(Time = seq(20, 180, by = 20),
-                                          Assay1 = rep(0, 9),
-                                          Assay2 = rep(0, 9),
+  #note to self, make the first values 0,0 for the water sample. 
+  data1 <- reactiveValues(df = data.frame(Sample = c("Water", "1 in 8 dilution", "1 in 4 dilution", "1 in 2 dilution", "Undiluted"),
+                                          Concentration = rep(NA, 5),
+                                          Absorbance = rep(NA, 5),
                                           stringsAsFactors = FALSE))
   
-# Convert Assay1 and Assay2 to numeric (if possible)
+  # Convert Assay1 and Assay2 to numeric (if possible)
+  observe({
+    data1$df$Absorbance <- as.numeric(data1$df$Absorbance)
+    data1$df$Concentration <- as.numeric(data1$df$Concentration)
+  })
+  
+  #Render the data table for Tab 1
+  output$table1 <- renderRHandsontable({
+    rhandsontable(data1$df) %>%
+      hot_col("Concentration", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
+      hot_col("Absorbance", type = "numeric", strict = FALSE, allowInvalid = FALSE)
+  })
+  
+  observe({
+    if (!is.null(input$table1)) {
+      data1$df <- hot_to_r(input$table1)
+    }
+  })
+  
+  
+  
+  # Render the absorbance vs concentration plot for Tab 1
+  output$absorbance_conc <- renderPlot({
+    
+    # Ensure the Concentration and Absorbance columns are not NULL
+    req(data1$df$Concentration, data1$df$Absorbance)
+    
+    #make the plot1
+    ggplot(data1$df, aes(x = Concentration, y = Absorbance)) +
+      geom_point(size = 3) +
+      geom_smooth(method = "lm", formula = y ~ x - 1, se = FALSE, color = "red", linetype = "dashed") + # Add line of best fit
+      labs(x = "Concentration (µmol/L)", y = "Absorbance", title = "Absorbance vs Concentration (µmol/L)") +
+      theme_minimal() +
+      theme(axis.line.x = element_line(color = "black", size = 1),
+            axis.line.y = element_line(color = "black", size = 1),
+            plot.title = element_text(hjust = 0.5)) +
+      scale_x_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Concentration, na.rm = TRUE) * 1.1)) + # Add this line
+      scale_y_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Absorbance, na.rm = TRUE) * 1.1)) # Add this line
+  })
+  
+  # Define the initial data frame for Tab 2
+  data2 <- reactiveValues(df = data.frame(
+    Time = seq(20, 180, by = 20),
+    Assay1 = rep(NA, 9),
+    Assay2 = rep(NA, 9),
+    stringsAsFactors = FALSE
+  ))
+  # Convert Assay1 and Assay2 to numeric (if possible)
   observe({
     data2$df$Assay1 <- as.numeric(data2$df$Assay1)
     data2$df$Assay2 <- as.numeric(data2$df$Assay2)
   })
-  
   # Render the data table for Tab 2
   output$table2 <- renderRHandsontable({
     rhandsontable(data2$df) %>% 
@@ -98,32 +108,46 @@ server <- function(input, output) {
       hot_col("Assay1", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
       hot_col("Assay2", type = "numeric", strict = TRUE, allowInvalid = FALSE)
   })
-  
-  #Update dataframe after inputs.
+  # Update dataframe after inputs
   observe({
     if (!is.null(input$table2)) {
       data2$df <- hot_to_r(input$table2)
     }
   })
-
+  
   # Render the progress Curve scatter plot for Tab 2
   output$progressCurve <- renderPlot({
     req(nrow(data2$df) > 0)
     
-    # Create the plot
+    # Subset the data
+    subset_data <- data2$df[data2$df$Time <= 40, ]
+    
+    
+    # Create the plot2
     ggplot(data2$df, aes(x = Time)) +
-      geom_point(aes(y = Assay1), color = "black") +
-      geom_point(aes(y = Assay2), color = "red") +
-      labs(x = "Time", y = "Assay", title = "Alcohol Dehydrogenase Assay") +
+      geom_point(aes(y = Assay1), color = "black",size = 3) +
+      geom_smooth(data = subset_data, aes(y = Assay1), color = "black", method = "lm", se = FALSE, fullrange = TRUE, linetype = "dotted") +
+      geom_point(aes(y = Assay2), color = "red", size = 3) +
+      geom_smooth(data = subset_data, aes(y = Assay2), color = "red", method = "lm", se = FALSE, fullrange = TRUE) +
+      labs(x = "Time (seconds)", y = "Absorbance", title = "Alcohol Dehydrogenase Assay") +
       theme_minimal() +
       scale_y_continuous(limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
+      scale_x_continuous(breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
+                         minor_breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 20)) +
       theme(legend.position = "bottomright") +
-      scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2"))
+      scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2")) +
+      theme(panel.grid.major = element_line(colour = "grey", linetype = "solid"),
+            axis.line = element_line(colour = "black", size = 1, linetype = "solid"))
+    
+    
   })
-   
-    #dataframe 3 generation. Currently it has values in for debugging.
-    #later we need to swap it back from seq to rep with NA's so the 
-    #students can enter their own data.
+  
+  
+  
+  
+  #dataframe 3 generation. Currently it has values in for debugging.
+  #later we need to swap it back from seq to rep with NA's so the 
+  #students can enter their own data.
   # Define the initial data frame
   data3 <- reactiveValues(df = data.frame(
     Time = seq(20, 180, by = 20),
@@ -139,7 +163,7 @@ server <- function(input, output) {
   output$table3 <- renderRHandsontable({
     rhandsontable(data3$df)
   })
-
+  
   # Update the data frame when the table is edited
   observe({
     if (!is.null(input$table3)) {
@@ -147,7 +171,7 @@ server <- function(input, output) {
     }
   })
   
-
+  
   # Create a reactive expression for table4
   table4 <- reactive({
     # Access the data from data3
