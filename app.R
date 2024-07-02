@@ -1,6 +1,7 @@
 library(shiny)
 library(ggplot2)
 library(rhandsontable)
+library(nls2)
 
 
 # Define UI for application
@@ -22,8 +23,7 @@ ui <- fluidPage(
                tags$br(),
                column(6,
                       rHandsontableOutput("table4"),
-                      
-                      tags$br(),
+                      rHandsontableOutput("tableVmax"),
                       plotOutput("VvsS"))
              )),
     tabPanel("Exercise 4",
@@ -148,14 +148,15 @@ server <- function(input, output) {
   #dataframe 3 generation. Currently it has values in for debugging.
   #later we need to swap it back from seq to rep with NA's so the 
   #students can enter their own data.
+  
   # Define the initial data frame
   data3 <- reactiveValues(df = data.frame(
     Time = seq(20, 180, by = 20),
     Conc1 = seq(from = 0, to = 0.3, length.out = 9)^1.5,
     Conc2 = seq(from = 0, to = 0.3, length.out = 9)^1.4,
     Conc3 = seq(from = 0, to = 0.3, length.out = 9)^1.3,
-    Conc4 = seq(from = 0, to = 0.3, length.out = 9)^1.2,
-    Conc5 = seq(from = 0, to = 0.3, length.out = 9)^1.1,
+    Conc4 = seq(from = 0, to = 0.3, length.out = 9)^1.25,
+    Conc5 = seq(from = 0, to = 0.3, length.out = 9)^1.24,
     stringsAsFactors = FALSE
   ))
   
@@ -183,8 +184,8 @@ server <- function(input, output) {
     # Remove the first column
     new_df <- new_df[,-1]
     
-    # Add an empty row
-    new_df <- rbind(new_df, rep(1, ncol(new_df)))
+    # Add an empty row, well it will be empty later but first we make the math work. 
+    new_df <- rbind(new_df, c(5,10,20,40,80))
     
     # Transpose the data frame
     new_df <- t(new_df)
@@ -193,7 +194,10 @@ server <- function(input, output) {
     colnames(new_df) <- c("deltaA", "Concentration")
     
     return(new_df)
+   
   })
+  
+  
   
   # Render table4
   output$table4 <- renderRHandsontable({
@@ -207,6 +211,7 @@ server <- function(input, output) {
   observeEvent(input$table4, {
     data$df <- hot_to_r(input$table4)
   })
+ 
   
   # Render the VvsS plot
   output$VvsS <- renderPlot({
@@ -216,9 +221,12 @@ server <- function(input, output) {
     # Create a ggplot2 dot plot
     ggplot(df, aes(x = Concentration, y = deltaA)) +
       geom_point() +
-      labs(x = "Concentration", y = "Delta A") +
+      labs(x = "Substrate Concentration", y = "ΔA/min") +
       theme_minimal()
   })
+  
+  
+  
   # Create a reactive expression for table5
   table5 <- reactive({
     # Access the data from the reactiveValues object
