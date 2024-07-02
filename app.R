@@ -1,7 +1,7 @@
 library(shiny)
 library(ggplot2)
 library(rhandsontable)
-library(nls2)
+
 
 
 # Define UI for application
@@ -10,7 +10,13 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Exercise 1",
              rHandsontableOutput("table1"),
-             plotOutput("absorbance_conc")),
+             plotOutput("absorbance_conc"),
+             helpText("This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
+                      "Each point on the graph corresponds to a sample. ",
+                      "The red dashed line is the line of best fit. It goes through the origin.",
+                      "The x-axis represents the Concentration (µmol/L) and the y-axis represents the Absorbance. ",
+                      )
+    ),
     tabPanel("Exercise 2",
              rHandsontableOutput("table2"),
              tags$br(),
@@ -205,32 +211,55 @@ server <- function(input, output) {
   })
   
   # Create a reactiveValues object to store the data
-  data <- reactiveValues()
+  data4 <- reactiveValues()
   
   # Update the data in the reactiveValues object when table4 changes
   observeEvent(input$table4, {
-    data$df <- hot_to_r(input$table4)
+    data4$df <- hot_to_r(input$table4)
   })
  
   
   # Render the VvsS plot
   output$VvsS <- renderPlot({
     # Access the data from the reactiveValues object
-    df <- data$df
+    df <- data4$df
+    
+    # Convert df to a data frame
+    df <- as.data.frame(df)
+    
+    # Fit the Michaelis-Menten equation to the data
+    fit <- nls(deltaA ~ Vmax * Concentration / (Km + Concentration), 
+               start = list(Vmax = max(df$deltaA, na.rm = TRUE), Km = median(df$Concentration, na.rm = TRUE)), 
+               data = df)
+    
+    # Get the Vmax and Km from the fit
+    Vmax <- coef(fit)["Vmax"]
+    Km <- coef(fit)["Km"]
     
     # Create a ggplot2 dot plot
     ggplot(df, aes(x = Concentration, y = deltaA)) +
       geom_point() +
-      labs(x = "Substrate Concentration", y = "ΔA/min") +
-      theme_minimal()
+      geom_segment(aes(x = 0, xend = Km, y = Vmax/2, yend = Vmax/2, linetype = "Half Vmax"), color = "red") +  # Add horizontal line at half Vmax
+      geom_segment(aes(x = Km, xend = Km, y = 0, yend = Vmax/2, linetype = "Km"), color = "blue") +   # Add vertical line at Km
+      geom_segment(aes(x = 0, xend = max(df$Concentration), y = Vmax, yend = Vmax, linetype = "Vmax"), color = "purple") +  # Add horizontal line at Vmax
+      labs(x = "Substrate Concentration", y = "ΔA/min",title = "V vs [S]", linetype = "Parameters") +
+      theme_minimal() +
+      theme(axis.line.x = element_line(color = "black", size = 1),
+           axis.line.y = element_line(color = "black", size = 1),
+           plot.title = element_text(hjust = 0.5)) +
+      scale_linetype_manual(values = c("dashed", "dashed", "dashed"))+
+      coord_cartesian(xlim = c(0, NA), ylim = c(0, NA))  # Set the limits of the x and y axes to start at 0
   })
+  
+  
+  
   
   
   
   # Create a reactive expression for table5
   table5 <- reactive({
     # Access the data from the reactiveValues object
-    df <- data$df
+    df <- data4$df
     
     # Calculate the reciprocal of each value in the data frame
     new_df <- 1 / df
