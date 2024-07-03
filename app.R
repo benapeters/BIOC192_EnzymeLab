@@ -158,17 +158,22 @@ server <- function(input, output) {
   # Define the initial data frame
   data3 <- reactiveValues(df = data.frame(
     Time = seq(20, 180, by = 20),
-    Conc1 = seq(from = 0, to = 0.3, length.out = 9)^1.5,
-    Conc2 = seq(from = 0, to = 0.3, length.out = 9)^1.4,
-    Conc3 = seq(from = 0, to = 0.3, length.out = 9)^1.3,
-    Conc4 = seq(from = 0, to = 0.3, length.out = 9)^1.25,
-    Conc5 = seq(from = 0, to = 0.3, length.out = 9)^1.24,
+    Conc1 = rep(NA, 9),
+    Conc2 = rep(NA, 9),
+    Conc3 = rep(NA, 9),
+    Conc4 = rep(NA, 9),
+    Conc5 = rep(NA, 9),
     stringsAsFactors = FALSE
   ))
   
   # Render the data table
   output$table3 <- renderRHandsontable({
-    rhandsontable(data3$df)
+    rhandsontable(data3$df) %>%
+      hot_col("Conc1", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
+      hot_col("Conc2", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
+      hot_col("Conc3", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
+      hot_col("Conc4", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
+      hot_col("Conc5", type = "numeric", strict = FALSE, allowInvalid = FALSE) 
   })
   
   # Update the data frame when the table is edited
