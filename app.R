@@ -11,8 +11,7 @@ ui <- fluidPage(
     tabPanel("Exercise 1",
              rHandsontableOutput("table1"),
              plotOutput("absorbance_conc"),
-             helpText("This graph will appear after you have entered your data. ",
-                      "This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
+             helpText("This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
                       "Each point on the graph corresponds to a sample. ",
                       "The red dashed line is the line of best fit. It goes through the origin.",
                       "The x-axis represents the Concentration (µmol/L) and the y-axis represents the Absorbance. ",
@@ -80,9 +79,6 @@ server <- function(input, output) {
   # Render the absorbance vs concentration plot for Tab 1
   output$absorbance_conc <- renderPlot({
     
-    # Ensure the Concentration and Absorbance columns are not NULL
-    req(data1$df$Concentration, data1$df$Absorbance)
-    
     #make the plot1
     ggplot(data1$df, aes(x = Concentration, y = Absorbance)) +
       geom_point(size = 3) +
@@ -92,8 +88,8 @@ server <- function(input, output) {
       theme(axis.line.x = element_line(color = "black", size = 1),
             axis.line.y = element_line(color = "black", size = 1),
             plot.title = element_text(hjust = 0.5)) +
-      scale_x_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Concentration, na.rm = TRUE) * 1.1)) + # Add this line
-      scale_y_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Absorbance, na.rm = TRUE) * 1.1)) # Add this line
+      scale_x_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Concentration, na.rm = TRUE) * 1.1)) + 
+      scale_y_continuous(expand = c(0, 0), limits = c(0, max(data1$df$Absorbance, na.rm = TRUE) * 1.1)) 
   })
   
   # Define the initial data frame for Tab 2
@@ -135,11 +131,11 @@ server <- function(input, output) {
       geom_point(aes(y = Assay1), color = "black",size = 3) +
       geom_smooth(data = subset_data, aes(y = Assay1), color = "black", method = "lm", se = FALSE, fullrange = TRUE, linetype = "dotted") +
       geom_point(aes(y = Assay2), color = "red", size = 3) +
-      geom_smooth(data = subset_data, aes(y = Assay2), color = "red", method = "lm", se = FALSE, fullrange = TRUE) +
+      geom_smooth(data = subset_data, aes(y = Assay2), color = "red", method = "lm", se = FALSE, fullrange = TRUE, linetype = "dotted") +
       labs(x = "Time (seconds)", y = "Absorbance", title = "Alcohol Dehydrogenase Assay") +
       theme_minimal() +
-      scale_y_continuous(limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
-      scale_x_continuous(breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
+      scale_y_continuous(expand = c(0,0), limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
+      scale_x_continuous(expand = c(0,0), breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
                          minor_breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 20)) +
       theme(legend.position = "bottomright") +
       theme(axis.line.x = element_line(color = "black", size = 1),
@@ -245,13 +241,15 @@ server <- function(input, output) {
       geom_point() +
       geom_segment(aes(x = 0, xend = Km, y = Vmax/2, yend = Vmax/2, linetype = "Half Vmax"), color = "red") +  # Add horizontal line at half Vmax
       geom_segment(aes(x = Km, xend = Km, y = 0, yend = Vmax/2, linetype = "Km"), color = "blue") +   # Add vertical line at Km
-      geom_segment(aes(x = 0, xend = max(df$Concentration), y = Vmax, yend = Vmax, linetype = "Vmax"), color = "purple") +  # Add horizontal line at Vmax
+      geom_segment(aes(x = 0, xend = max(df$Concentration)*1.1, y = Vmax, yend = Vmax, linetype = "Vmax"), color = "purple") +  # Add horizontal line at Vmax
       labs(x = "Substrate Concentration", y = "ΔA/min",title = "V vs [S]", linetype = "Parameters") +
       theme_minimal() +
       theme(axis.line.x = element_line(color = "black", size = 1),
            axis.line.y = element_line(color = "black", size = 1),
            plot.title = element_text(hjust = 0.5)) +
       scale_linetype_manual(values = c("dashed", "dashed", "dashed"))+
+      scale_x_continuous(expand = c(0, 0), limits = c(0, max(df$Concentration)*1.1))+
+      scale_y_continuous(expand = c(0,0), limits = c(0, max(Vmax ,na.rm = TRUE) * 1.1))+
       coord_cartesian(xlim = c(0, NA), ylim = c(0, NA))  # Set the limits of the x and y axes to start at 0
   })
   
@@ -279,14 +277,27 @@ server <- function(input, output) {
   # Render the Lineweaver-Burk plot
   output$lineweaver <- renderPlot({
     # Access the data from table5
-    df <- table5()
+    df <- as.data.frame(table5())  # Convert the matrix to a dataframe
+    
+    # Fit a linear model
+    fit <- lm(deltaA ~ Concentration, data = df)
+    
+    # Calculate the x-intercept (where y = 0)
+    x_intercept <- -fit$coefficients[1] / fit$coefficients[2]
     
     # Create a ggplot2 dot plot
     ggplot(df, aes(x = Concentration, y = deltaA)) +
       geom_point() +
+      geom_abline(intercept = fit$coefficients[1], slope = fit$coefficients[2], color = "red") +  # Draw the regression line manually
+      geom_vline(xintercept = 0, color = "black") +  # Add a vertical line at 0 on the x-axis
+      geom_hline(yintercept = 0, color = "black") +  # Add a horizontal line at 0 on the y-axis
+      expand_limits(x = min(0, x_intercept)) +  # Extend the x-axis to include the x-intercept
+      ylim(0, NA) +  # Set the starting point of the y-axis to 0
       labs(x = "1/Concentration", y = "1/Delta A") +
       theme_minimal()
   })
+  
+  
   
 }
 
