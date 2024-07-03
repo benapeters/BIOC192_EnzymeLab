@@ -11,7 +11,8 @@ ui <- fluidPage(
     tabPanel("Exercise 1",
              rHandsontableOutput("table1"),
              plotOutput("absorbance_conc"),
-             helpText("This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
+             helpText("This graph will appear after you have entered your data. ",
+                      "This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
                       "Each point on the graph corresponds to a sample. ",
                       "The red dashed line is the line of best fit. It goes through the origin.",
                       "The x-axis represents the Concentration (µmol/L) and the y-axis represents the Absorbance. ",
@@ -141,6 +142,9 @@ server <- function(input, output) {
       scale_x_continuous(breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
                          minor_breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 20)) +
       theme(legend.position = "bottomright") +
+      theme(axis.line.x = element_line(color = "black", size = 1),
+            axis.line.y = element_line(color = "black", size = 1),
+            plot.title = element_text(hjust = 0.5)) +
       scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2")) +
       theme(panel.grid.major = element_line(colour = "grey", linetype = "solid"),
             axis.line = element_line(colour = "black", size = 1, linetype = "solid"))
