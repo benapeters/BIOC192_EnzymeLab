@@ -250,13 +250,15 @@ server <- function(input, output) {
       labs(x = "Substrate Concentration", y = "ΔA/min",title = "V vs [S]", linetype = "Parameters") +
       theme_minimal() +
       theme(axis.line.x = element_line(color = "black", size = 1),
-           axis.line.y = element_line(color = "black", size = 1),
-           plot.title = element_text(hjust = 0.5)) +
+            axis.line.y = element_line(color = "black", size = 1),
+            plot.title = element_text(hjust = 0.5)) +
       scale_linetype_manual(values = c("dashed", "dashed", "dashed"))+
       scale_x_continuous(expand = c(0, 0), limits = c(0, max(df$Concentration)*1.1))+
       scale_y_continuous(expand = c(0,0), limits = c(0, max(Vmax ,na.rm = TRUE) * 1.1))+
-      coord_cartesian(xlim = c(0, NA), ylim = c(0, NA))  # Set the limits of the x and y axes to start at 0
+      coord_cartesian(xlim = c(0, NA), ylim = c(0, NA)) +  # Set the limits of the x and y axes to start at 0
+      annotate("text", x = max(df$Concentration)*0.5, y = max(Vmax ,na.rm = TRUE)*0.9, label = paste("Vmax =", round(Vmax, 2), "\nKm =", round(Km, 2)), hjust = 0.5, vjust = 0.5, size = 4, color = "black")  # Add a text box with the values of Vmax and Km
   })
+  
   
   
   
@@ -296,11 +298,15 @@ server <- function(input, output) {
       geom_abline(intercept = fit$coefficients[1], slope = fit$coefficients[2], color = "red") +  # Draw the regression line manually
       geom_vline(xintercept = 0, color = "black") +  # Add a vertical line at 0 on the x-axis
       geom_hline(yintercept = 0, color = "black") +  # Add a horizontal line at 0 on the y-axis
-      expand_limits(x = min(0, x_intercept)) +  # Extend the x-axis to include the x-intercept
+      expand_limits(x = min(0, -fit$coefficients[1]/fit$coefficients[2])) +  # Extend the x-axis to include the x-intercept
       ylim(0, NA) +  # Set the starting point of the y-axis to 0
       labs(x = "1/Concentration", y = "1/Delta A") +
-      theme_minimal()
+      theme_minimal() +
+      annotate("text", x = 0.025, y = max(df$deltaA)/1.1, hjust = 0, vjust = 0,
+               label = paste("y-intercept =", round(fit$coefficients[1], 2), "\nx-intercept =", round(-fit$coefficients[1]/fit$coefficients[2], 2)),
+               size = 4, color = "black", bg = "white")
   })
+  
   
   
   
