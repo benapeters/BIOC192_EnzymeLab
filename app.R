@@ -20,6 +20,8 @@ ui <- fluidPage(
     tabPanel("Exercise 2",
              rHandsontableOutput("table2"),
              tags$br(),
+             verbatimTextOutput("slider_label"),
+             sliderInput("slider_id", "Slider Label", min = 20, max = 180, step = 20, value = 180),
              plotOutput("progressCurve")),
     tabPanel("Exercise 3",
              fluidRow(
@@ -94,11 +96,17 @@ server <- function(input, output) {
   
   # Define the initial data frame for Tab 2
   data2 <- reactiveValues(df = data.frame(
-    Time = seq(20, 180, by = 20),
-    Assay1 = rep(NA, 9),
-    Assay2 = rep(NA, 9),
+    Time = seq(0, 180, by = 20),
+    Assay1 = rep(NA, 10),
+    Assay2 = rep(NA, 10),
     stringsAsFactors = FALSE
   ))
+  
+  #The slider text
+  output$slider_label <- renderText({
+    "Move the slider so that only the initial linear portion of the graph is used for the line of best fit"
+  })
+  
   # Convert Assay1 and Assay2 to numeric (if possible)
   observe({
     data2$df$Assay1 <- as.numeric(data2$df$Assay1)
@@ -122,8 +130,13 @@ server <- function(input, output) {
   output$progressCurve <- renderPlot({
     req(nrow(data2$df) > 0)
     
-    # Subset the data
-    subset_data <- data2$df[data2$df$Time <= 40, ]
+    
+    # Assuming you have a reactive input called "input$slider_id" that captures the slider value
+    slider_value <- input$slider_id
+    
+    # Subset the data based on the slider value
+    subset_data <- data2$df[data2$df$Time <= slider_value, ]
+    
     
     
     # Create the plot2
