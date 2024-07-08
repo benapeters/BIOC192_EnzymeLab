@@ -9,6 +9,7 @@ ui <- fluidPage(
   titlePanel("BIOC192 Lab 2"),
   tabsetPanel(
     tabPanel("Exercise 1",
+             titlePanel("Table 1 (page 40)"),  # Add this line for the title
              rHandsontableOutput("table1"),
              plotOutput("absorbance_conc"),
              helpText("This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
@@ -20,8 +21,7 @@ ui <- fluidPage(
     tabPanel("Exercise 2",
              rHandsontableOutput("table2"),
              tags$br(),
-             verbatimTextOutput("slider_label"),
-             sliderInput("slider_id", "Slider Label", min = 20, max = 180, step = 20, value = 180),
+             sliderInput("slider_id", "Assay1", min = 20, max = 180, step = 20, value = 180),
              plotOutput("progressCurve")),
     tabPanel("Exercise 3",
              fluidRow(
@@ -96,9 +96,9 @@ server <- function(input, output) {
   
   # Define the initial data frame for Tab 2
   data2 <- reactiveValues(df = data.frame(
-    Time = seq(0, 180, by = 20),
-    Assay1 = rep(NA, 10),
-    Assay2 = rep(NA, 10),
+    Time = seq(20, 180, by = 20),
+    Assay1 = rep(NA, 9),
+    Assay2 = rep(NA, 9),
     stringsAsFactors = FALSE
   ))
   
@@ -141,14 +141,16 @@ server <- function(input, output) {
     
     # Create the plot2
     ggplot(data2$df, aes(x = Time)) +
-      geom_point(aes(y = Assay1), color = "black",size = 3) +
+      geom_line(aes(y = Assay1), color = "grey", size = 2) +
+      geom_line(aes(y = Assay2), color = "pink", size = 2) +
       geom_smooth(data = subset_data, aes(y = Assay1), color = "black", method = "lm", se = FALSE, fullrange = TRUE, linetype = "dotted") +
-      geom_point(aes(y = Assay2), color = "red", size = 3) +
       geom_smooth(data = subset_data, aes(y = Assay2), color = "red", method = "lm", se = FALSE, fullrange = TRUE, linetype = "dotted") +
+      geom_point(aes(y = Assay1), color = "black", size = 3) +
+      geom_point(aes(y = Assay2), color = "red", size = 3) +
       labs(x = "Time (seconds)", y = "Absorbance", title = "Alcohol Dehydrogenase Assay") +
       theme_minimal() +
-      scale_y_continuous(expand = c(0,0), limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
-      scale_x_continuous(expand = c(0,0), breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
+      scale_y_continuous(expand = c(0, 0), limits = c(0, max(data2$df$Assay1, data2$df$Assay2, na.rm = TRUE) * 1.1)) +
+      scale_x_continuous(expand = c(0, 0), limits = c(0, 200), breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 60), 
                          minor_breaks = seq(0, max(data2$df$Time, na.rm = TRUE), by = 20)) +
       theme(legend.position = "bottomright") +
       theme(axis.line.x = element_line(color = "black", size = 1),
@@ -156,7 +158,17 @@ server <- function(input, output) {
             plot.title = element_text(hjust = 0.5)) +
       scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2")) +
       theme(panel.grid.major = element_line(colour = "grey", linetype = "solid"),
-            axis.line = element_line(colour = "black", size = 1, linetype = "solid"))
+            axis.line = element_line(colour = "black", size = 1, linetype = "solid")) +
+      annotate("text", x = 14, y = predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.1, 
+               label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2))) +
+      annotate("text", x = 90, y = predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.15, 
+               label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)))+
+      annotate("text", x = 14, y = predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.15, 
+               label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2)), color = "red") +
+      annotate("text", x = 90, y = predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.1, 
+               label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)), color = "red")
+    
+    
     
     
   })
