@@ -9,8 +9,10 @@ ui <- fluidPage(
   titlePanel("BIOC192 Lab 2"),
   tabsetPanel(
     tabPanel("Exercise 1",
-             titlePanel("Table 1 (page 40)"),  # Add this line for the title
+             "Table 2, page 41 of your lab book",
              rHandsontableOutput("table1"),
+             tags$br(),
+             "Plot for page 42 of your lab book",
              plotOutput("absorbance_conc"),
              helpText("This graph represents the relationship between Concentration (µmol/L) and Absorbance. ",
                       "Each point on the graph corresponds to a sample. ",
@@ -19,9 +21,12 @@ ui <- fluidPage(
                       )
     ),
     tabPanel("Exercise 2",
+             "Enter data from Table 3, Page 48 of your lab book",
              rHandsontableOutput("table2"),
              tags$br(),
-             sliderInput("slider_id", "Assay1", min = 20, max = 180, step = 20, value = 180),
+             "Move the slider so that only the initial linear portion of the graph is used for the line of best fit",
+             sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 180),
+             "The plot will appear once you have entered data for both assays",
              plotOutput("progressCurve")),
     tabPanel("Exercise 3",
              fluidRow(
@@ -138,8 +143,7 @@ server <- function(input, output) {
     subset_data <- data2$df[data2$df$Time <= slider_value, ]
     
     
-    
-    # Create the plot2
+  tryCatch({
     ggplot(data2$df, aes(x = Time)) +
       geom_line(aes(y = Assay1), color = "grey", size = 2) +
       geom_line(aes(y = Assay2), color = "pink", size = 2) +
@@ -159,18 +163,17 @@ server <- function(input, output) {
       scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2")) +
       theme(panel.grid.major = element_line(colour = "grey", linetype = "solid"),
             axis.line = element_line(colour = "black", size = 1, linetype = "solid")) +
-      annotate("text", x = 14, y = predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.1, 
+      annotate("text", x = 14, y = ifelse(!is.na(subset_data$Assay1), predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.1, NA), 
                label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2))) +
-      annotate("text", x = 90, y = predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.15, 
+      annotate("text", x = 90, y = ifelse(!is.na(subset_data$Assay1), predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.15, NA), 
                label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)))+
-      annotate("text", x = 14, y = predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.15, 
+      annotate("text", x = 14, y = ifelse(!is.na(subset_data$Assay2), predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.15, NA), 
                label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2)), color = "red") +
-      annotate("text", x = 90, y = predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.1, 
+      annotate("text", x = 90, y = ifelse(!is.na(subset_data$Assay2), predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.1, NA), 
                label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)), color = "red")
     
     
-    
-    
+  }, error = function(e){"the plot will appear once you have entered your data"})
   })
   
   
