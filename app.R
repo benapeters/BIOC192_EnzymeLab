@@ -22,24 +22,32 @@ ui <- fluidPage(
     ),
     tabPanel("Exercise 2",
              "Enter data from Table 3, Page 48 of your lab book",
-             rHandsontableOutput("table2"),
-             tags$br(),
+             fluidRow(
+             column(6,
+                    rHandsontableOutput("table2")),
+             column(6,
+                    tableOutput("annotated_points"))),
+             
              "Move the slider so that only the initial linear portion of the graph is used for the line of best fit",
-             sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 180),
-             "The plot will appear once you have entered data for both assays",
-             plotOutput("progressCurve")),
+             column(12,sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 180)),
+             fluidRow(
+             column(12,plotOutput("progressCurve"))
+             
+             
+             )),
     tabPanel("Exercise 3",
+             "Enter data from Table 5, page 53 of your lab book",
              fluidRow(
                column(6,
                       rHandsontableOutput("table3")
                ),
-               tags$br(),
                column(6,
                       rHandsontableOutput("table4"),
-                      rHandsontableOutput("tableVmax"),
-                      plotOutput("VvsS"))
+                      ),
+               "The plot will appear once you have entered data in at least three columns. Ignore the error warning",
+               column(12, plotOutput("VvsS"))
              )),
-    tabPanel("Exercise 4",
+    tabPanel("Exercise 3 LB",
              fluidRow(
                column(6,
                       rHandsontableOutput("table5"),
@@ -142,6 +150,29 @@ server <- function(input, output) {
     # Subset the data based on the slider value
     subset_data <- data2$df[data2$df$Time <= slider_value, ]
     
+    tryCatch({
+    output$annotated_points <- renderTable({
+      subset_data <- subset_data
+      subset_data <- as.data.frame(subset_data)
+    # Fit the Michaelis-Menten equation to the data
+    fit1 <- lm(Assay1 ~ Time, data = subset_data)
+    fit2 <- lm(Assay2 ~ Time, data = subset_data)
+    # Create a data frame with the annotated points
+    annotated_points <- data.frame(
+      Assay = rep(c("Assay1", "Assay2"), each = 2),
+      Time = c(20, 80, 20, 80),
+      Value = c(predict(fit1, newdata = data.frame(Time = 20)),
+                predict(fit1, newdata = data.frame(Time = 80)),
+                predict(fit2, newdata = data.frame(Time = 20)),
+                predict(fit2, newdata = data.frame(Time = 80)))
+    )
+    
+    
+    # Return the annotated points
+    return(annotated_points)
+    }, error = function(e){"The table will work once you have entered data"})
+  })
+  
     
   tryCatch({
     ggplot(data2$df, aes(x = Time)) +
@@ -162,16 +193,8 @@ server <- function(input, output) {
             plot.title = element_text(hjust = 0.5)) +
       scale_color_manual(values = c("black", "red"), labels = c("Assay1", "Assay2")) +
       theme(panel.grid.major = element_line(colour = "grey", linetype = "solid"),
-            axis.line = element_line(colour = "black", size = 1, linetype = "solid")) +
-      annotate("text", x = 14, y = ifelse(!is.na(subset_data$Assay1), predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.1, NA), 
-               label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2))) +
-      annotate("text", x = 90, y = ifelse(!is.na(subset_data$Assay1), predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.15, NA), 
-               label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)))+
-      annotate("text", x = 14, y = ifelse(!is.na(subset_data$Assay2), predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 20)) + 0.15, NA), 
-               label = paste("Y at 20s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 20)), 2)), color = "red") +
-      annotate("text", x = 90, y = ifelse(!is.na(subset_data$Assay2), predict(lm(Assay2 ~ Time, data = subset_data), newdata = data.frame(Time = 80)) + -0.1, NA), 
-               label = paste("Y at 80s:", round(predict(lm(Assay1 ~ Time, data = subset_data), newdata = data.frame(Time = 80)), 2)), color = "red")
-    
+            axis.line = element_line(colour = "black", size = 1, linetype = "solid"))
+ 
     
   }, error = function(e){"the plot will appear once you have entered your data"})
   })
@@ -230,7 +253,7 @@ server <- function(input, output) {
     new_df <- t(new_df)
     
     # Add column names
-    colnames(new_df) <- c("deltaA", "Concentration")
+    colnames(new_df) <- c("Initial_Reaction_Rate", "Concentration")
     
     return(new_df)
    
@@ -261,21 +284,32 @@ server <- function(input, output) {
     df <- as.data.frame(df)
     
     # Fit the Michaelis-Menten equation to the data
-    fit <- nls(deltaA ~ Vmax * Concentration / (Km + Concentration), 
-               start = list(Vmax = max(df$deltaA, na.rm = TRUE), Km = median(df$Concentration, na.rm = TRUE)), 
+    fit <- nls(Initial_Reaction_Rate ~ Vmax * Concentration / (Km + Concentration), 
+               start = list(Vmax = max(df$Initial_Reaction_Rate, na.rm = TRUE), Km = median(df$Concentration, na.rm = TRUE)), 
                data = df)
     
     # Get the Vmax and Km from the fit
     Vmax <- coef(fit)["Vmax"]
     Km <- coef(fit)["Km"]
     
+    # Create a sequence of x values to represent the substrate concentration
+    x <- seq(0, max(df$Concentration, na.rm = TRUE), length.out = 100)
+    
+    # Calculate the corresponding y values for the fitted model
+    y <- Vmax * x / (Km + x)
+    
+    # Create a data frame for the fitted model
+    df_fit <- data.frame(Concentration = x, Initial_Reaction_Rate = y)
+    
+    tryCatch({
     # Create a ggplot2 dot plot
-    ggplot(df, aes(x = Concentration, y = deltaA)) +
-      geom_point() +
+    ggplot() +
+      geom_point(data = df, aes(x = Concentration, y = Initial_Reaction_Rate)) +
+      geom_line(data = df_fit, aes(x = Concentration, y = Initial_Reaction_Rate), linetype = "dashed", color = "black") +  # Add the fitted model line
       geom_segment(aes(x = 0, xend = Km, y = Vmax/2, yend = Vmax/2, linetype = "Half Vmax"), color = "red") +  # Add horizontal line at half Vmax
       geom_segment(aes(x = Km, xend = Km, y = 0, yend = Vmax/2, linetype = "Km"), color = "blue") +   # Add vertical line at Km
       geom_segment(aes(x = 0, xend = max(df$Concentration)*1.1, y = Vmax, yend = Vmax, linetype = "Vmax"), color = "purple") +  # Add horizontal line at Vmax
-      labs(x = "Substrate Concentration", y = "ΔA/min",title = "V vs [S]", linetype = "Parameters") +
+      labs(x = "Substrate Concentration", y = "ΔA/min (Initial rate of reaction)",title = "V vs [S]", linetype = "Parameters") +
       theme_minimal() +
       theme(axis.line.x = element_line(color = "black", size = 1),
             axis.line.y = element_line(color = "black", size = 1),
@@ -285,7 +319,9 @@ server <- function(input, output) {
       scale_y_continuous(expand = c(0,0), limits = c(0, max(Vmax ,na.rm = TRUE) * 1.1))+
       coord_cartesian(xlim = c(0, NA), ylim = c(0, NA)) +  # Set the limits of the x and y axes to start at 0
       annotate("text", x = max(df$Concentration)*0.5, y = max(Vmax ,na.rm = TRUE)*0.9, label = paste("Vmax =", round(Vmax, 2), "\nKm =", round(Km, 2)), hjust = 0.5, vjust = 0.5, size = 4, color = "black")  # Add a text box with the values of Vmax and Km
-  })
+    }, error = function(e){"the plot will appear once you have entered your data in at least 3 columns"})
+      })
+  
   
   
   
@@ -315,13 +351,13 @@ server <- function(input, output) {
     df <- as.data.frame(table5())  # Convert the matrix to a dataframe
     
     # Fit a linear model
-    fit <- lm(deltaA ~ Concentration, data = df)
+    fit <- lm(Initial_Reaction_Rate ~ Concentration, data = df)
     
     # Calculate the x-intercept (where y = 0)
     x_intercept <- -fit$coefficients[1] / fit$coefficients[2]
     
     # Create a ggplot2 dot plot
-    ggplot(df, aes(x = Concentration, y = deltaA)) +
+    ggplot(df, aes(x = Concentration, y = Initial_Reaction_Rate)) +
       geom_point() +
       geom_abline(intercept = fit$coefficients[1], slope = fit$coefficients[2], color = "red") +  # Draw the regression line manually
       geom_vline(xintercept = 0, color = "black") +  # Add a vertical line at 0 on the x-axis
@@ -330,7 +366,7 @@ server <- function(input, output) {
       ylim(0, NA) +  # Set the starting point of the y-axis to 0
       labs(x = "1/Concentration", y = "1/Delta A") +
       theme_minimal() +
-      annotate("text", x = 0.025, y = max(df$deltaA)/1.1, hjust = 0, vjust = 0,
+      annotate("text", x = 0.025, y = max(df$Initial_Reaction_Rate)/1.1, hjust = 0, vjust = 0,
                label = paste("y-intercept =", round(fit$coefficients[1], 2), "\nx-intercept =", round(-fit$coefficients[1]/fit$coefficients[2], 2)),
                size = 4, color = "black", bg = "white")
   })
