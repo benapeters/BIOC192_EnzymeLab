@@ -9,6 +9,7 @@ ui <- fluidPage(
   titlePanel("BIOC192 Lab 2"),
   tabsetPanel(
     tabPanel("Exercise 1",
+             tags$br(),
              "Table 2, page 41 of your lab book",
              rHandsontableOutput("table1"),
              tags$br(),
@@ -74,9 +75,10 @@ server <- function(input, output) {
   
   #Render the data table for Tab 1
   output$table1 <- renderRHandsontable({
-    rhandsontable(data1$df) %>%
-      hot_col("Concentration", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
-      hot_col("Absorbance", type = "numeric", strict = FALSE, allowInvalid = FALSE)
+    rhandsontable(data1$df,rowHeaders = FALSE) %>%
+      hot_col(1,readOnly = TRUE, format = 0) %>%
+      hot_col("Concentration", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Absorbance", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000)
   })
   
   observe({
@@ -123,10 +125,10 @@ server <- function(input, output) {
   })
   # Render the data table for Tab 2
   output$table2 <- renderRHandsontable({
-    rhandsontable(data2$df) %>% 
-      hot_col("Time", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
-      hot_col("Assay1", type = "numeric", strict = TRUE, allowInvalid = FALSE) %>%
-      hot_col("Assay2", type = "numeric", strict = TRUE, allowInvalid = FALSE)
+    rhandsontable(data2$df, rowHeaders = FALSE) %>% 
+      hot_col("Time", type = "numeric", strict = TRUE, allowInvalid = FALSE, readOnly = TRUE, format = 0) %>%
+      hot_col("Assay1", type = "numeric", strict = TRUE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Assay2", type = "numeric", strict = TRUE, allowInvalid = FALSE, format = 0.000)
   })
   # Update dataframe after inputs
   observe({
@@ -139,18 +141,17 @@ server <- function(input, output) {
   output$progressCurve <- renderPlot({
     req(nrow(data2$df) > 0)
     
-    
-    # Assuming you have a reactive input called "input$slider_id" that captures the slider value
+    #writes the slider input to the slider value
     slider_value <- input$slider_id
     
     # Subset the data based on the slider value
     subset_data <- data2$df[data2$df$Time <= slider_value, ]
     
     tryCatch({
-    output$annotated_points <- renderTable({
-      subset_data <- subset_data
-      subset_data <- as.data.frame(subset_data)
-      print(subset_data)
+      output$annotated_points <- renderTable({
+        subset_data <- subset_data
+        subset_data <- as.data.frame(subset_data)
+
       if (!any(is.na(subset_data))) {
        # Fit the Michaelis-Menten equation to the data
     fit1 <- lm(Assay1 ~ Time, data = subset_data)
@@ -219,12 +220,13 @@ server <- function(input, output) {
   
   # Render the data table
   output$table3 <- renderRHandsontable({
-    rhandsontable(data3$df) %>%
-      hot_col("Conc1", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
-      hot_col("Conc2", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
-      hot_col("Conc3", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
-      hot_col("Conc4", type = "numeric", strict = FALSE, allowInvalid = FALSE) %>%
-      hot_col("Conc5", type = "numeric", strict = FALSE, allowInvalid = FALSE) 
+    rhandsontable(data3$df, rowHeaders = FALSE) %>%
+      hot_col(1, readOnly = TRUE, format = 0) %>%
+      hot_col("Conc1", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Conc2", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Conc3", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Conc4", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) %>%
+      hot_col("Conc5", type = "numeric", strict = FALSE, allowInvalid = FALSE, format = 0.000) 
   })
   
   # Update the data frame when the table is edited
@@ -263,7 +265,7 @@ server <- function(input, output) {
   
   # Render table4
   output$table4 <- renderRHandsontable({
-    rhandsontable(table4(), readOnly = FALSE) 
+    rhandsontable(table4(), readOnly = TRUE) 
   })
   
   # Create a reactiveValues object to store the data
