@@ -22,19 +22,13 @@ ui <- fluidPage(
     ),
     tabPanel("Exercise 2",
              "Enter data from Table 3, Page 48 of your lab book",
-             fluidRow(
-             column(6,
-                    rHandsontableOutput("table2")),
-             column(6,
-                    tableOutput("annotated_points"))),
-             
+             rHandsontableOutput("table2"),
+             tableOutput("annotated_points"),
              "Move the slider so that only the initial linear portion of the graph is used for the line of best fit",
-             column(12,sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 180)),
-             fluidRow(
-             column(12,plotOutput("progressCurve"))
-             
-             
-             )),
+             sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 20),
+             plotOutput("progressCurve")
+             ),
+    
     tabPanel("Exercise 3",
              "Enter data from Table 5, page 53 of your lab book",
              fluidRow(
@@ -48,9 +42,11 @@ ui <- fluidPage(
                column(12, plotOutput("VvsS"))
              )),
     tabPanel("Exercise 3 LB",
+             
              fluidRow(
                column(6,
                       rHandsontableOutput("table5"),
+                      rHandsontableOutput("intercepts_table"),
                       plotOutput("lineweaver"))
              ))
   )
@@ -154,9 +150,12 @@ server <- function(input, output) {
     output$annotated_points <- renderTable({
       subset_data <- subset_data
       subset_data <- as.data.frame(subset_data)
-    # Fit the Michaelis-Menten equation to the data
+      print(subset_data)
+      if (!any(is.na(subset_data))) {
+       # Fit the Michaelis-Menten equation to the data
     fit1 <- lm(Assay1 ~ Time, data = subset_data)
     fit2 <- lm(Assay2 ~ Time, data = subset_data)
+      
     # Create a data frame with the annotated points
     annotated_points <- data.frame(
       Assay = rep(c("Assay1", "Assay2"), each = 2),
@@ -169,9 +168,10 @@ server <- function(input, output) {
     
     
     # Return the annotated points
-    return(annotated_points)
+    return(annotated_points)}
     }, error = function(e){"The table will work once you have entered data"})
   })
+    
   
     
   tryCatch({
@@ -345,6 +345,43 @@ server <- function(input, output) {
     rhandsontable(table5(), readOnly = TRUE) 
   })
   
+  #create dataframe for intercept values table
+  intercepts_table <- reactive({
+    df_int <- data4$df
+    
+    # Calculate the reciprocal of each value in the data frame
+    new_df_int <- as.data.frame(1 / df_int)
+    
+    # Perform a linear fit to the data
+    fit <- lm(Initial_Reaction_Rate ~ Concentration, data = new_df_int)
+    
+    # Extract the intercept and slope values from the linear fit
+    intercepts <- coef(fit)
+    
+    # Calculate the x-intercept
+    x_intercept <- -intercepts[1] / intercepts[2]
+    
+    # Create a new dataframe with the x and y intercept values
+    intercepts_df <- data.frame(
+      X_Intercept = x_intercept,
+      Y_Intercept = intercepts[1]
+    )
+    
+    return(intercepts_df)
+  })
+  
+  # Render the intercepts table
+  output$intercepts_table <- renderRHandsontable({
+    rhandsontable(intercepts_table(), readOnly = TRUE,rowHeaders = NULL) 
+  })
+  
+  
+  
+  # Render the intercepts table
+  output$intercepts_table <- renderRHandsontable({
+    rhandsontable(intercepts_table(), readOnly = TRUE) 
+  })
+  
   # Render the Lineweaver-Burk plot
   output$lineweaver <- renderPlot({
     # Access the data from table5
@@ -365,10 +402,10 @@ server <- function(input, output) {
       expand_limits(x = min(0, -fit$coefficients[1]/fit$coefficients[2])) +  # Extend the x-axis to include the x-intercept
       ylim(0, NA) +  # Set the starting point of the y-axis to 0
       labs(x = "1/Concentration", y = "1/Delta A") +
-      theme_minimal() +
-      annotate("text", x = 0.025, y = max(df$Initial_Reaction_Rate)/1.1, hjust = 0, vjust = 0,
-               label = paste("y-intercept =", round(fit$coefficients[1], 2), "\nx-intercept =", round(-fit$coefficients[1]/fit$coefficients[2], 2)),
-               size = 4, color = "black", bg = "white")
+      theme_minimal() 
+      #+annotate("text", x = 0.025, y = max(df$Initial_Reaction_Rate)/1.1, hjust = 0, vjust = 0,
+             #  label = paste("y-intercept =", round(fit$coefficients[1], 2), "\nx-intercept =", round(-fit$coefficients[1]/fit$coefficients[2], 2)),
+             #  size = 4, color = "black", bg = "white")
   })
   
   
