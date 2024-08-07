@@ -23,9 +23,15 @@ ui <- fluidPage(
     ),
     tabPanel("Exercise 2",
              "Enter data from Table 3, Page 48 of your lab book",
-             rHandsontableOutput("table2"),
-             tableOutput("annotated_points"),
-             "Move the slider so that only the initial linear portion of the graph is used for the line of best fit",
+             fluidRow(
+               column(6,rHandsontableOutput("table2")),
+               "This table will show you the values at time points 20 and 80 seconds from the linear line. It will only be accurate afte you have entered all values and adjusted the slider.",
+               column(6,tableOutput("annotated_points"))
+               ),
+             fluidRow(
+               column(6,"Move the slider so that only the initial linear portion of the graph is used for the line of best fit")
+             ),
+            
              sliderInput("slider_id", "", min = 20, max = 180, step = 20, value = 20),
              plotOutput("progressCurve")
              ),
@@ -46,10 +52,11 @@ ui <- fluidPage(
              
              fluidRow(
                column(6,
-                      rHandsontableOutput("table5"),
-                      rHandsontableOutput("intercepts_table"),
+                      rHandsontableOutput("table5")),
+               column(6,
+                      rHandsontableOutput("intercepts_table")),
                       plotOutput("lineweaver"))
-             ))
+             )
   )
 )
 
@@ -243,7 +250,7 @@ server <- function(input, output) {
     df <- data3$df
     
     # Calculate the difference between the second and first value in each column
-    new_df <- data.frame(lapply(df, function(x) (x[2] - x[1])*3))
+    new_df <- data.frame(lapply(df, function(x) ((x[2] - x[1])*3)+ (x[3] - x[2]*3)/2))
     
     # Remove the first column
     new_df <- new_df[,-1]
@@ -372,16 +379,13 @@ server <- function(input, output) {
     return(intercepts_df)
   })
   
-  # Render the intercepts table
-  output$intercepts_table <- renderRHandsontable({
-    rhandsontable(intercepts_table(), readOnly = TRUE,rowHeaders = NULL) 
-  })
-  
-  
+
   
   # Render the intercepts table
   output$intercepts_table <- renderRHandsontable({
-    rhandsontable(intercepts_table(), readOnly = TRUE) 
+    rhandsontable(intercepts_table(), readOnly = TRUE, rowHeaders = FALSE)  %>%
+    hot_col(1, readOnly = TRUE, format = 0.000)  %>%
+    hot_col(2, readOnly = TRUE, format = 0.000)
   })
   
   # Render the Lineweaver-Burk plot
