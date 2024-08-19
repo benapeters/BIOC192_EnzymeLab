@@ -250,7 +250,7 @@ server <- function(input, output) {
     df <- data3$df
     
     # Calculate the difference between the second and first value in each column
-    new_df <- data.frame(lapply(df, function(x) (((x[2] - x[1])*3)+(x[3] - x[2])*3)/2))
+    new_df <- data.frame(lapply(df, function(x) (((x[2] - x[1])*3)+ (x[3] - x[2])*3)/2))
     
     # Remove the first column
     new_df <- new_df[,-1]
