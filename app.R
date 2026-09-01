@@ -217,10 +217,10 @@ server <- function(input, output) {
   # Define the initial data frame
   data3 <- reactiveValues(df = data.frame(
     Time = seq(20, 180, by = 20),
-    Conc1 = rep(NA, 9),
-    Conc2 = rep(NA, 9),
-    Conc3 = rep(NA, 9),
-    Conc4 = rep(NA, 9),
+    Conc1 = c(0.223, 0.298, 0.364, 0.424, rep(NA, 6)),
+    Conc2 = c(0.291, 0.388, 0.473, 0.550, rep(NA, 6)),
+    Conc3 = c(0.354, 0.470, 0.574, 0.670, rep(NA, 6)),
+    Conc4 = c(0.421, 0.558, 0.682, 0.796, rep(NA, 6)),
     Conc5 = rep(NA, 9),
     stringsAsFactors = FALSE
   ))
